@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 
-const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+const getStoredApiKey = () => {
+  try { return localStorage.getItem("nfl-scout-api-key") || ""; } catch { return ""; }
+};
 
 const NFL_TEAMS = [
   { abbr: "ARI", name: "Arizona Cardinals", conf: "NFC", div: "West", color: "#97233F", alt: "#FFB612" },
@@ -1491,6 +1493,8 @@ export default function NFLScoutApp() {
   const [chatMessages, setChatMessages] = useState([]);  // [{role, content}]
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [apiKey, setApiKey] = useState(getStoredApiKey);
+  const [showApiKeyInput, setShowApiKeyInput] = useState(!getStoredApiKey());
   const reportRef = useRef(null);
   const chatBottomRef = useRef(null);
 
@@ -1562,7 +1566,7 @@ export default function NFLScoutApp() {
         headers: {
           "Content-Type": "application/json",
           "anthropic-version": "2023-06-01",
-          "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
+          "x-api-key": apiKey,
           "anthropic-dangerous-direct-browser-access": "true",
         },
         body: JSON.stringify({
@@ -1606,7 +1610,7 @@ export default function NFLScoutApp() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
+          "x-api-key": apiKey,
           "anthropic-version": "2023-06-01",
           "anthropic-dangerous-direct-browser-access": "true",
         },
@@ -1653,7 +1657,7 @@ Use realistic 2024 NGS-style statistics. Write the personalGameplan in second pe
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
+          "x-api-key": apiKey,
           "anthropic-version": "2023-06-01",
           "anthropic-dangerous-direct-browser-access": "true",
         },
@@ -1675,7 +1679,101 @@ Use realistic 2024 NGS-style statistics. Write the personalGameplan in second pe
     }
   };
 
+  const saveApiKey = (key) => {
+    try { localStorage.setItem("nfl-scout-api-key", key); } catch {}
+    setApiKey(key);
+    setShowApiKeyInput(false);
+  };
+
+  const clearApiKey = () => {
+    try { localStorage.removeItem("nfl-scout-api-key"); } catch {}
+    setApiKey("");
+    setShowApiKeyInput(true);
+  };
+
   const threatColor = (v) => v >= 8 ? "#f87171" : v >= 6 ? "#fbbf24" : "#4ade80";
+
+  if (showApiKeyInput && !apiKey) {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        background: "#f5f0e8",
+        fontFamily: "'Barlow', sans-serif",
+        color: "#1e1a14",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap');`}</style>
+        <div style={{
+          background: "white",
+          borderRadius: "16px",
+          padding: "48px",
+          maxWidth: "480px",
+          width: "90%",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+          textAlign: "center",
+        }}>
+          <div style={{
+            width: "56px", height: "56px",
+            background: "linear-gradient(135deg, #1d4ed8, #7c3aed)",
+            borderRadius: "14px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 20px",
+            fontSize: "28px",
+          }}>🏈</div>
+          <h1 style={{
+            fontSize: "28px", fontWeight: "900", letterSpacing: "0.1em",
+            textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif",
+            margin: "0 0 8px",
+          }}>NGS Scout</h1>
+          <p style={{ color: "#9a8e7e", fontSize: "14px", margin: "0 0 28px", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.08em" }}>
+            Enter your Anthropic API key to get started
+          </p>
+          <form onSubmit={e => {
+            e.preventDefault();
+            const key = e.target.elements.apikey.value.trim();
+            if (key) saveApiKey(key);
+          }}>
+            <input
+              name="apikey"
+              type="password"
+              placeholder="sk-ant-..."
+              autoFocus
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                fontSize: "15px",
+                border: "2px solid rgba(0,0,0,0.12)",
+                borderRadius: "10px",
+                fontFamily: "'Barlow', sans-serif",
+                outline: "none",
+                marginBottom: "16px",
+                boxSizing: "border-box",
+              }}
+            />
+            <button type="submit" style={{
+              width: "100%",
+              padding: "12px",
+              fontSize: "15px",
+              fontWeight: "700",
+              fontFamily: "'Barlow Condensed', sans-serif",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              background: "linear-gradient(135deg, #1d4ed8, #7c3aed)",
+              color: "white",
+              border: "none",
+              borderRadius: "10px",
+              cursor: "pointer",
+            }}>Connect & Launch</button>
+          </form>
+          <p style={{ color: "#b0a898", fontSize: "12px", marginTop: "20px", lineHeight: 1.5 }}>
+            Your key is stored only in this browser's localStorage and sent directly to the Anthropic API. It is never stored on any server.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -1814,6 +1912,16 @@ Use realistic 2024 NGS-style statistics. Write the personalGameplan in second pe
             <option value="">Select team</option>
             {NFL_TEAMS.map(t => <option key={t.abbr} value={t.abbr}>{t.abbr} – {t.name}</option>)}
           </select>
+          <button onClick={clearApiKey} title="Change API key" style={{
+            display: "flex", alignItems: "center", gap: "5px",
+            background: "#f0fdf4", border: "1px solid #bbf7d0",
+            borderRadius: "6px", padding: "4px 10px", cursor: "pointer",
+          }}>
+            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+            <span style={{ fontSize: "11px", color: "#15803d", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: "700" }}>
+              API KEY
+            </span>
+          </button>
         </div>
       </div>
 
