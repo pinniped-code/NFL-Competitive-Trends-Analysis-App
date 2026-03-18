@@ -4,6 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "npm run dev --prefix \"NFL Competitive Trends Analysis App\"",
+    "build": "npm run build --prefix \"NFL Competitive Trends Analysis App\"",
+    "install:app": "npm install --prefix \"NFL Competitive Trends Analysis App\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
